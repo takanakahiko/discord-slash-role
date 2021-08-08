@@ -36,6 +36,7 @@ func main() {
 		if i.Type == discordgo.InteractionApplicationCommand {
 			if i.ApplicationCommandData().Name == "role" {
 				createButtons(s, i)
+				return
 			}
 		}
 
