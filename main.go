@@ -44,63 +44,9 @@ func main() {
 			return
 		}
 
-		// ボタンで渡された内容をパースする
-		// TODO: 実装が壊滅的に悪いのでどうにかする
-		partsOfCustomID := strings.Split(i.MessageComponentData().CustomID, ":")
-		if len(partsOfCustomID) != 4 {
-			return
-		}
-		prefix := partsOfCustomID[0]
-		command := partsOfCustomID[1]
-		roleID := partsOfCustomID[2]
-		userID := partsOfCustomID[3]
+		// ロールをいじる
+		editRole(s, i)
 
-		// ボタンで渡された内容が slash-role と関係ない場合は無視する
-		if prefix != "slash-role" {
-			return
-		}
-
-		// ボタンで渡された内容に応じてロールの付与や削除を行う
-		var content string
-		switch {
-		case command == "cancel":
-			content = "キャンセルしました"
-		case userID != i.Member.User.ID:
-			content = "コマンド打った人とボタン押した人が違うよ"
-		case command == "add":
-			if err := s.GuildMemberRoleAdd(i.GuildID, userID, roleID); err != nil {
-				content = "エラーになったよ"
-				log.Printf("error: %s", err.Error())
-			} else {
-				if role, err := s.State.Role(i.GuildID, roleID); err != nil {
-					content = "エラーになったよ"
-					log.Printf("error: %s", err.Error())
-				} else {
-					content = fmt.Sprintf("%sさんにロール「%s」を付与したよ", i.Member.User.Username, role.Name)
-				}
-			}
-		case command == "remove":
-			if err := s.GuildMemberRoleRemove(i.GuildID, userID, roleID); err != nil {
-				content = "エラーになったよ"
-				log.Printf("error: %s", err.Error())
-			} else {
-				if role, err := s.State.Role(i.GuildID, roleID); err != nil {
-					content = "エラーになったよ"
-					log.Printf("error: %s", err.Error())
-				} else {
-					content = fmt.Sprintf("%sさんからロール「%s」を削除したよ", i.Member.User.Username, role.Name)
-				}
-			}
-		}
-
-		// 処理結果を表示する
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseUpdateMessage,
-			Data: &discordgo.InteractionResponseData{
-				Content:    content,
-				Components: []discordgo.MessageComponent{},
-			},
-		})
 	})
 
 	if _, err := s.ApplicationCommandCreate(*AppID, *GuildID, &discordgo.ApplicationCommand{
@@ -223,4 +169,65 @@ func createButtons(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		panic(err)
 	}
 
+}
+
+// editRole edit role by interaction
+func editRole(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// ボタンで渡された内容をパースする
+	// TODO: 実装が壊滅的に悪いのでどうにかする
+	partsOfCustomID := strings.Split(i.MessageComponentData().CustomID, ":")
+	if len(partsOfCustomID) != 4 {
+		return
+	}
+	prefix := partsOfCustomID[0]
+	command := partsOfCustomID[1]
+	roleID := partsOfCustomID[2]
+	userID := partsOfCustomID[3]
+
+	// ボタンで渡された内容が slash-role と関係ない場合は無視する
+	if prefix != "slash-role" {
+		return
+	}
+
+	// ボタンで渡された内容に応じてロールの付与や削除を行う
+	var content string
+	switch {
+	case command == "cancel":
+		content = "キャンセルしました"
+	case userID != i.Member.User.ID:
+		content = "コマンド打った人とボタン押した人が違うよ"
+	case command == "add":
+		if err := s.GuildMemberRoleAdd(i.GuildID, userID, roleID); err != nil {
+			content = "エラーになったよ"
+			log.Printf("error: %s", err.Error())
+		} else {
+			if role, err := s.State.Role(i.GuildID, roleID); err != nil {
+				content = "エラーになったよ"
+				log.Printf("error: %s", err.Error())
+			} else {
+				content = fmt.Sprintf("%sさんにロール「%s」を付与したよ", i.Member.User.Username, role.Name)
+			}
+		}
+	case command == "remove":
+		if err := s.GuildMemberRoleRemove(i.GuildID, userID, roleID); err != nil {
+			content = "エラーになったよ"
+			log.Printf("error: %s", err.Error())
+		} else {
+			if role, err := s.State.Role(i.GuildID, roleID); err != nil {
+				content = "エラーになったよ"
+				log.Printf("error: %s", err.Error())
+			} else {
+				content = fmt.Sprintf("%sさんからロール「%s」を削除したよ", i.Member.User.Username, role.Name)
+			}
+		}
+	}
+
+	// 処理結果を表示する
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content:    content,
+			Components: []discordgo.MessageComponent{},
+		},
+	})
 }
