@@ -13,23 +13,18 @@ import (
 
 // Bot parameters
 var (
-	GuildID = flag.String("guild", "", "Test guild ID")
+	GuildID = flag.String("guild", "", "if specifide, you can install command only one server")
 	AppID   = flag.String("app", "", "Application ID")
 )
 
-var s *discordgo.Session
-
 func init() { flag.Parse() }
 
-func init() {
-	var err error
-	s, err = discordgo.New("Bot " + os.Getenv("TOKEN"))
+func main() {
+
+	s, err := discordgo.New("Bot " + os.Getenv("TOKEN"))
 	if err != nil {
 		log.Fatalf("Invalid bot parameters: %v", err)
 	}
-}
-
-func main() {
 
 	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Println("Bot is up!")
@@ -130,14 +125,13 @@ func main() {
 				})
 
 				// ボタンを表示する
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Content:    "アクションを選択してください",
 						Components: actionsRows,
 					},
-				})
-				if err != nil {
+				}); err != nil {
 					panic(err)
 				}
 			}
@@ -150,6 +144,7 @@ func main() {
 		}
 
 		// ボタンで渡された内容をパースする
+		// TODO: 実装が壊滅的に悪いのでどうにかする
 		partsOfCustomID := strings.Split(i.MessageComponentData().CustomID, ":")
 		if len(partsOfCustomID) != 4 {
 			return
@@ -172,25 +167,25 @@ func main() {
 		case userID != i.Member.User.ID:
 			content = "コマンド打った人とボタン押した人が違うよ"
 		case command == "add":
-			err := s.GuildMemberRoleAdd(i.GuildID, userID, roleID)
-			if err != nil {
+			if err := s.GuildMemberRoleAdd(i.GuildID, userID, roleID); err != nil {
 				content = "エラーになったよ"
-				log.Fatal(err.Error())
+				log.Printf("error: %s", err.Error())
 			} else {
 				if role, err := s.State.Role(i.GuildID, roleID); err != nil {
 					content = "エラーになったよ"
+					log.Printf("error: %s", err.Error())
 				} else {
 					content = fmt.Sprintf("%sさんにロール「%s」を付与したよ", i.Member.User.Username, role.Name)
 				}
 			}
 		case command == "remove":
-			err := s.GuildMemberRoleRemove(i.GuildID, userID, roleID)
-			if err != nil {
+			if err := s.GuildMemberRoleRemove(i.GuildID, userID, roleID); err != nil {
 				content = "エラーになったよ"
-				log.Fatal(err.Error())
+				log.Printf("error: %s", err.Error())
 			} else {
 				if role, err := s.State.Role(i.GuildID, roleID); err != nil {
 					content = "エラーになったよ"
+					log.Printf("error: %s", err.Error())
 				} else {
 					content = fmt.Sprintf("%sさんからロール「%s」を削除したよ", i.Member.User.Username, role.Name)
 				}
@@ -207,16 +202,14 @@ func main() {
 		})
 	})
 
-	_, err := s.ApplicationCommandCreate(*AppID, *GuildID, &discordgo.ApplicationCommand{
+	if _, err := s.ApplicationCommandCreate(*AppID, *GuildID, &discordgo.ApplicationCommand{
 		Name:        "role",
 		Description: "change role",
-	})
-	if err != nil {
+	}); err != nil {
 		log.Fatalf("Cannot create slash command: %v", err)
 	}
 
-	err = s.Open()
-	if err != nil {
+	if err := s.Open(); err != nil {
 		log.Fatalf("Cannot open the session: %v", err)
 	}
 	defer s.Close()
