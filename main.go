@@ -32,110 +32,11 @@ func main() {
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		// Bot自身のロールを取得する
-		var myBotRole *discordgo.Role
-		if me, err := s.GuildMember(i.GuildID, s.State.User.ID); err != nil {
-			panic(err)
-		} else {
-			for _, id := range me.Roles {
-				if myRole, err := s.State.Role(i.GuildID, id); err != nil {
-					panic(err)
-				} else if myRole.Managed {
-					myBotRole = myRole
-					break
-				}
-			}
-			if myBotRole == nil {
-				panic(err)
-			}
-		}
-
 		// コマンドが実行されたときの振る舞い
 		if i.Type == discordgo.InteractionApplicationCommand {
 			if i.ApplicationCommandData().Name == "role" {
-
-				var buttons []discordgo.MessageComponent
-
-				roles, err := s.GuildRoles(i.GuildID)
-				if err != nil {
-					panic(err)
-				}
-				for _, role := range roles {
-
-					// Bot用の Role だったり、 @everyone だったり、 自分より優先度の高い Role だったら無視する
-					if role.Managed || role.Position == 0 || role.Position > myBotRole.Position {
-						continue
-					}
-
-					// そのロールがメンバーにアタッチされているか確認する
-					isAttached := false
-					for _, id := range i.Member.Roles {
-						if id == role.ID {
-							isAttached = true
-							break
-						}
-					}
-
-					// ロールをつけたり削除するためのボタンを作る
-					var button discordgo.Button
-					if isAttached {
-						button = discordgo.Button{
-							Label:    fmt.Sprintf("Remove '%s'", role.Name),
-							Style:    discordgo.DangerButton,
-							Disabled: false,
-							CustomID: fmt.Sprintf("slash-role:remove:%s:%s", role.ID, i.Member.User.ID),
-						}
-					} else {
-						button = discordgo.Button{
-							Label:    fmt.Sprintf("Add '%s'", role.Name),
-							Style:    discordgo.SuccessButton,
-							Disabled: false,
-							CustomID: fmt.Sprintf("slash-role:add:%s:%s", role.ID, i.Member.User.ID),
-						}
-					}
-
-					buttons = append(buttons, button)
-
-				}
-
-				// 5つ以上のボタンを同じ行に入れることができないので、5つ毎に違う行に入れるようにする
-				var actionsRows []discordgo.MessageComponent
-				for i := 0; i < (len(buttons)/5)+1; i++ {
-					actionsRow := discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{},
-					}
-					for j, b := range buttons {
-						if j/5 == i {
-							actionsRow.Components = append(actionsRow.Components, b)
-						}
-					}
-					actionsRows = append(actionsRows, actionsRow)
-				}
-
-				// キャンセル用のボタンを追加する
-				actionsRows = append(actionsRows, discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.Button{
-							Label:    "Cancel",
-							Style:    discordgo.SecondaryButton,
-							Disabled: false,
-							CustomID: "slash-role:cancel::",
-						},
-					},
-				})
-
-				// ボタンを表示する
-				if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content:    "アクションを選択してください",
-						Components: actionsRows,
-					},
-				}); err != nil {
-					panic(err)
-				}
+				createButtons(s, i)
 			}
-			return
 		}
 
 		// ボタンが押されたときじゃない場合は無視する
@@ -218,4 +119,108 @@ func main() {
 	signal.Notify(stop, os.Interrupt)
 	<-stop
 	log.Println("Graceful shutdown")
+}
+
+// createButtons create buttons to set roles by Discord interactions
+func createButtons(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+	// Bot自身のロールを取得する
+	var myBotRole *discordgo.Role
+	if me, err := s.GuildMember(i.GuildID, s.State.User.ID); err != nil {
+		panic(err)
+	} else {
+		for _, id := range me.Roles {
+			if myRole, err := s.State.Role(i.GuildID, id); err != nil {
+				panic(err)
+			} else if myRole.Managed {
+				myBotRole = myRole
+				break
+			}
+		}
+		if myBotRole == nil {
+			panic(err)
+		}
+	}
+
+	var buttons []discordgo.MessageComponent
+
+	roles, err := s.GuildRoles(i.GuildID)
+	if err != nil {
+		panic(err)
+	}
+	for _, role := range roles {
+
+		// Bot用の Role だったり、 @everyone だったり、 自分より優先度の高い Role だったら無視する
+		if role.Managed || role.Position == 0 || role.Position > myBotRole.Position {
+			continue
+		}
+
+		// そのロールがメンバーにアタッチされているか確認する
+		isAttached := false
+		for _, id := range i.Member.Roles {
+			if id == role.ID {
+				isAttached = true
+				break
+			}
+		}
+
+		// ロールをつけたり削除するためのボタンを作る
+		var button discordgo.Button
+		if isAttached {
+			button = discordgo.Button{
+				Label:    fmt.Sprintf("Remove '%s'", role.Name),
+				Style:    discordgo.DangerButton,
+				Disabled: false,
+				CustomID: fmt.Sprintf("slash-role:remove:%s:%s", role.ID, i.Member.User.ID),
+			}
+		} else {
+			button = discordgo.Button{
+				Label:    fmt.Sprintf("Add '%s'", role.Name),
+				Style:    discordgo.SuccessButton,
+				Disabled: false,
+				CustomID: fmt.Sprintf("slash-role:add:%s:%s", role.ID, i.Member.User.ID),
+			}
+		}
+
+		buttons = append(buttons, button)
+
+	}
+
+	// 5つ以上のボタンを同じ行に入れることができないので、5つ毎に違う行に入れるようにする
+	var actionsRows []discordgo.MessageComponent
+	for i := 0; i < (len(buttons)/5)+1; i++ {
+		actionsRow := discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{},
+		}
+		for j, b := range buttons {
+			if j/5 == i {
+				actionsRow.Components = append(actionsRow.Components, b)
+			}
+		}
+		actionsRows = append(actionsRows, actionsRow)
+	}
+
+	// キャンセル用のボタンを追加する
+	actionsRows = append(actionsRows, discordgo.ActionsRow{
+		Components: []discordgo.MessageComponent{
+			discordgo.Button{
+				Label:    "Cancel",
+				Style:    discordgo.SecondaryButton,
+				Disabled: false,
+				CustomID: "slash-role:cancel::",
+			},
+		},
+	})
+
+	// ボタンを表示する
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content:    "アクションを選択してください",
+			Components: actionsRows,
+		},
+	}); err != nil {
+		panic(err)
+	}
+
 }
