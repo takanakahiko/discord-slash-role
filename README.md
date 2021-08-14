@@ -2,7 +2,7 @@
 
 ## Usage
 
-![Still JPG (714x248)](https://user-images.githubusercontent.com/10114717/129457515-3e4a1686-13e1-41ac-af24-0f6bdc4124aa.jpg)
+![Large GIF (714x248)](https://user-images.githubusercontent.com/10114717/129457728-50b317b1-65d9-47df-81da-10614dc6221a.gif)
 
 ## Run
 
