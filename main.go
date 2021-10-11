@@ -50,6 +50,29 @@ func main() {
 
 	})
 
+	// reset all commands
+	if *AppID != "" {
+		if commands, err := s.ApplicationCommands(*AppID, *GuildID); err != nil {
+			log.Fatalf("Cannot get existed slash commands: %v", err)
+		} else {
+			for _, command := range commands {
+				if err := s.ApplicationCommandDelete(*AppID, *GuildID, command.ID); err != nil {
+					log.Fatalf("Cannot delete existed slash command: %v", err)
+				}
+			}
+		}
+	}
+
+	if commands, err := s.ApplicationCommands(*AppID, *GuildID); err != nil {
+		log.Fatalf("Cannot get existed slash commands: %v", err)
+	} else {
+		for _, command := range commands {
+			if err := s.ApplicationCommandDelete(*AppID, *GuildID, command.ID); err != nil {
+				log.Fatalf("Cannot delete existed slash command: %v", err)
+			}
+		}
+	}
+
 	if _, err := s.ApplicationCommandCreate(*AppID, *GuildID, &discordgo.ApplicationCommand{
 		Name:        "role",
 		Description: "change role",
