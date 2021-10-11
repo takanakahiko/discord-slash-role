@@ -51,12 +51,12 @@ func main() {
 	})
 
 	// reset all commands
-	if *AppID != "" {
-		if commands, err := s.ApplicationCommands(*AppID, *GuildID); err != nil {
+	if *GuildID != "" {
+		if commands, err := s.ApplicationCommands(*AppID, ""); err != nil {
 			log.Fatalf("Cannot get existed slash commands: %v", err)
 		} else {
 			for _, command := range commands {
-				if err := s.ApplicationCommandDelete(*AppID, *GuildID, command.ID); err != nil {
+				if err := s.ApplicationCommandDelete(*AppID, "", command.ID); err != nil {
 					log.Fatalf("Cannot delete existed slash command: %v", err)
 				}
 			}
@@ -158,7 +158,7 @@ func createButtons(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	// 5つ以上のボタンを同じ行に入れることができないので、5つ毎に違う行に入れるようにする
 	var actionsRows []discordgo.MessageComponent
-	for i := 0; i < (len(buttons)/5)+1; i++ {
+	for i := 0; i < (len(buttons)-1)/5+1; i++ {
 		actionsRow := discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{},
 		}
