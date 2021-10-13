@@ -188,6 +188,7 @@ func createButtons(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Data: &discordgo.InteractionResponseData{
 			Content:    "アクションを選択してください",
 			Components: actionsRows,
+			Flags:      1 << 6,
 		},
 	}); err != nil {
 		panic(err)
